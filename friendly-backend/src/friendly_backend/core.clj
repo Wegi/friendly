@@ -3,17 +3,16 @@
             [clojure.java.io :as io]
             [clojure.edn :as edn]))
 
-(defn load-edn
-  "Load edn from an io/reader source (filename or io/resource)."
-  [source]
-  (try
-    (with-open [r (io/reader source)]
-      (edn/read (java.io.PushbackReader. r)))
 
-    (catch java.io.IOException e
-      (printf "Couldn't open '%s': %s\n" source (.getMessage e)))
-    (catch RuntimeException e
-      (printf "Error parsing edn file '%s': %s\n" source (.getMessage e)))))
+(defn load-data!
+  [file-path]
+  (read-string (slurp file-path)))
+
+
+(defn save-data!
+  [data file-path]
+  (spit file-path (prn-str data)))
+
 
 (defn weighted-uniform-draw
   "Draws a random uniform oject by weight from the collection. `weight-key` denominates which key in the map is refering to the weight."
