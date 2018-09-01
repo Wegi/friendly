@@ -18,32 +18,53 @@
 (defn weighted-uniform-draw
   "Draws a random uniform oject by weight from the collection. `weight-key` denominates which key in the map is refering to the weight."
   [contacts weight-key]
-  (let [weights (reductions + (map (keyword weight-key) contacts))
+  (let [weights (reductions + (map (keyword weight-key) (vals contacts)))
         total (last weights)
-        choices (map vector contacts weights)]
+        choices (map vector (keys contacts) weights)]
     (let [choice (rand-int total)]
-      (loop [[[contact weight] & more] choices]
+      (loop [[[contact-name weight] & more] choices]
         (if (< choice weight)
-          contact
+          (get contacts contact-name)
           (recur more))))))
 
 (defn add-friend!
   [friend db-file]
   (let [db (load-data! db-file)]
-    (save-data! (conj db friend) db-file)))
+    (save-data! (assoc db (:name friend) friend) db-file)))
 
-(defn foo
-  "I don't do a whole lot."
-  [x]
+(defn send-reminder
+  "Takes a contact and a recipient and sends a reminder."
+  [contact recipient]
   (postal/send-message {:host (System/getenv "MAIL_HOST")
                         :user (System/getenv "MAIL_USER")
                         :pass (System/getenv "MAIL_PASS")
                         :tls true}
                        {:from "wegi.pwnz@googlemail.com"
-                        :to "alexander@schneider.gg"
-                        :subject "Test friends"
-                        :body "Heyaa contact your friends."}))
+                        :to recipient
+                        :subject (format "Meld dich mal bei %s" (:name contact))
+                        :body (format "Du hast dich seit %d Tagen nicht mehr bei %s gemeldet.\n\n %s"
+                                      (:days-since-contact contact)
+                                      (:name contact)
+                                      contact)}))
+
+(defn reset-last-seen
+  [contacts friend-name]
+  (assoc-in contacts [friend-name :days-since-contact] 0))
+
+(defn delete-friend!
+  [db-path friend-name]
+  (let [db (load-data! db-path)
+        new-db (dissoc db friend-name)]
+    (save-data! new-db db-path)))
+
+(defn draw-and-send!
+  "Draws a friend weighted by last contact in days. Resets the timer to 0 and then sends a reminder-email."
+  [db-path weight-key recipient]
+  (let [db (load-data! db-path)
+        friend (weighted-uniform-draw db weight-key)]
+    (save-data! (reset-last-seen db (:name friend)) db-path)
+    (send-reminder friend recipient)))
 
 (defn -main
-  [& args]
-  (print "Hello friends"))
+  [database recipient & args]
+  (draw-and-send! database :days-since-contact recipient))
