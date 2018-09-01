@@ -3,16 +3,17 @@
             [clojure.java.io :as io]
             [clojure.edn :as edn]))
 
+;; TO-DO
+;; Save write
+;; Save read
 
 (defn load-data!
   [file-path]
   (read-string (slurp file-path)))
 
-
 (defn save-data!
   [data file-path]
   (spit file-path (prn-str data)))
-
 
 (defn weighted-uniform-draw
   "Draws a random uniform oject by weight from the collection. `weight-key` denominates which key in the map is refering to the weight."
@@ -25,6 +26,11 @@
         (if (< choice weight)
           contact
           (recur more))))))
+
+(defn add-friend!
+  [friend db-file]
+  (let [db (load-data! db-file)]
+    (save-data! (conj db friend) db-file)))
 
 (defn foo
   "I don't do a whole lot."
